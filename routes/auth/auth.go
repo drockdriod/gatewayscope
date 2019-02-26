@@ -7,9 +7,9 @@ import (
 
 func GetGroup(parentPath *gin.RouterGroup) *gin.RouterGroup {
 	r := parentPath.Group("/auth")
-	
-	// Be sure to use struts here to define a schema in which the JSON would conform to
-	
+
+	// r.use()
+		
 	r.POST("/register", authController.Register)
 
 	r.GET("/accounts", authController.GetAccounts)

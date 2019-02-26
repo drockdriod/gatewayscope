@@ -3,6 +3,7 @@ package db
 import (
     "github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/mongo"
+	bsonPrimitive "github.com/mongodb/mongo-go-driver/bson/primitive"
 	"log"
 	"context"
 	"os"
@@ -78,19 +79,34 @@ func GetItems(collection string, filter bson.D) ([]bson.M) {
 	return jsonArray
 }
 
-func InsertObj(collection string, jsonBody interface{}) (*mongo.InsertOneResult, error){
-	log.Println("client")
-	log.Println(client)
-	return client.Database(dbDetails["dbName"]).Collection(collection).InsertOne(dbContext, jsonBody)
+func InsertObj(collection string, jsonBody interface{}) (*mongo.InsertOneResult, error, bsonPrimitive.ObjectID){
+	objectId := bsonPrimitive.NewObjectID()
+
+	var bsonObj map[string]interface{}
+
+	var body1, err = bson.Marshal(jsonBody)
+
+	body2, err := bson.Marshal(bson.M{"_id": objectId })
+	
+	bson.Unmarshal(body1, &bsonObj)
+	bson.Unmarshal(body2, &bsonObj)
+
+	res, err := client.Database(dbDetails["dbName"]).Collection(collection).InsertOne(dbContext, bsonObj)
+
+	return res, err, objectId
 }
 
-func Client() (*mongo.Database, context.Context, error){
-
-	getConnectionDetails()
-
-	if(client == nil){
-		return nil, nil, fmt.Errorf("Client is not connected")
-	}
-
-	return client.Database(dbDetails["dbName"]), dbContext, nil
+func UpdateObj(collection string,filter interface{}, jsonBody interface{}) (*mongo.UpdateResult, error){
+	return client.Database(dbDetails["dbName"]).Collection(collection).UpdateOne(dbContext, filter, jsonBody)
 }
+
+// func Client() (*mongo.Database, context.Context, error){
+
+// 	getConnectionDetails()
+
+// 	if(client == nil){
+// 		return nil, nil, fmt.Errorf("Client is not connected")
+// 	}
+
+// 	return client.Database(dbDetails["dbName"]), dbContext, nil
+// }

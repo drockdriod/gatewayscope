@@ -11,10 +11,8 @@ import (
 	_ "github.com/joho/godotenv/autoload"
     "log"
     authRouter "github.com/drockdriod/gatewayscope/routes/auth"
-    // "./models"
 )
 
-type element map[string]interface{}
 
 func main() {
 	ctx := context.Background()
