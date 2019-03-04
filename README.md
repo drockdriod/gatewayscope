@@ -23,7 +23,7 @@ This newly created function allows me to decode the JWT for the purpose of grabb
 The clientId would be used to instantiate the gin-jwt middleware with the correct RSA public/private keys.
 
 ### Crypto
-There was some issues with generating dynamic RSA private/ public PEMs. Generating a public PEM based on the private predicesor resulted in the public key to read as "invalid" upon validation with the JWT token. I used the https://golang.org/pkg/crypto/x509 library, specifically the MarshalPKCS1PublicKey ¶ function, to perform the public PEM export.
+There was some issues with generating dynamic RSA private/ public PEMs. Generating a public PEM based on the private PEM pair resulted in the public key to read as "invalid" upon validation with the JWT token. I used the https://golang.org/pkg/crypto/x509 library, specifically the MarshalPKCS1PublicKey ¶ function, to perform the public PEM export.
 
 It turns out that function was not returning the result I needed:
 https://github.com/golang/go/issues/29141
