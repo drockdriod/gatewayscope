@@ -54,7 +54,21 @@ func getConnectionDetails() {
 
 }
 
-func GetItems(collection string, filter bson.D) ([]bson.M) {
+func FindOne(collection string, filter interface{}) (interface{}) {
+	var v map[string]interface{}
+
+	
+	err := client.Database(dbDetails["dbName"]).Collection(collection).FindOne(dbContext, filter).Decode(&v)
+
+	if(err != nil){
+		log.Fatal(err.Error())
+	}
+
+
+	return v
+}
+
+func GetItems(collection string, filter interface{}) ([]bson.M) {
 
 	cur, err := client.Database(dbDetails["dbName"]).Collection(collection).Find(dbContext, filter)
 

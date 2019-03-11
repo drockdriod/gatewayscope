@@ -11,6 +11,7 @@ import (
 	_ "github.com/joho/godotenv/autoload"
     "log"
     authRouter "github.com/drockdriod/gatewayscope/routes/auth"
+    clientRouter "github.com/drockdriod/gatewayscope/routes/clients"
 )
 
 
@@ -20,21 +21,21 @@ func main() {
 	v := os.Getenv("VERSION_NO")
 
 
-	client, err := db.Connect(ctx)
+	dbClient, err := db.Connect(ctx)
 
 	if err != nil { 
 		log.Fatal("error")
 		log.Fatal(err) 
 	}
 
-	log.Println(client)
+	log.Println(dbClient)
 
 	r := gin.Default()
 
 	root := r.Group(fmt.Sprintf("/v%s",v))
 	{
 		authRouter.GetGroup(root) 
-		
+		clientRouter.GetGroup(root) 
 	}
 
 

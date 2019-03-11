@@ -1,24 +1,19 @@
-package auth
+package clients
 
 import (
 	"github.com/gin-gonic/gin"
 	// "log"
     // "github.com/drockdriod/gatewayscope/utils/crypto/jwt"
     "github.com/drockdriod/gatewayscope/utils/common"
-    authController "github.com/drockdriod/gatewayscope/controllers/auth"
+    clientController "github.com/drockdriod/gatewayscope/controllers/clients"
 )
 
 func GetGroup(parentPath *gin.RouterGroup) *gin.RouterGroup {
-	r := parentPath.Group("/auth/:clientId")
-		
-	parentPath.POST("/register", authController.Register)
-
-	parentPath.POST("/login", authController.Login)
+	r := parentPath.Group("/clients/:clientId")
 
 	r.Use(common.ClientAuthMiddleware())
 	{
-		r.GET("/accounts", authController.GetAccounts)
-		r.POST("/users/register", authController.UserRegister)
+		r.POST("/permissions/:userId/check", clientController.ComparePermissionsByUserId)
 	}
 
 
