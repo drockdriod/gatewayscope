@@ -2,9 +2,9 @@ package auth
 
 import (
 	"github.com/gin-gonic/gin"
+    ginJWT "github.com/appleboy/gin-jwt"
 	// "log"
-    // "github.com/drockdriod/gatewayscope/utils/crypto/jwt"
-    "github.com/drockdriod/gatewayscope/utils/common"
+    commonUtils "github.com/drockdriod/gatewayscope/utils/common"
     authController "github.com/drockdriod/gatewayscope/controllers/auth"
 )
 
@@ -15,10 +15,17 @@ func GetGroup(parentPath *gin.RouterGroup) *gin.RouterGroup {
 
 	parentPath.POST("/login", authController.Login)
 
-	r.Use(common.ClientAuthMiddleware())
+	r.Use(commonUtils.ClientAuthMiddleware())
 	{
 		r.GET("/accounts", authController.GetAccounts)
-		r.POST("/users/register", authController.UserRegister)
+
+		usersRoute := r.Group("/users")
+
+		usersRoute.POST("/register", authController.UserRegister)
+		usersRoute.POST("/login", func(c *gin.Context) {
+			authMiddleware := c.MustGet("authMiddleware").(*ginJWT.GinJWTMiddleware)
+			authMiddleware.LoginHandler(c)
+		})
 	}
 
 

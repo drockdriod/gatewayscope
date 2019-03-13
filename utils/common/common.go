@@ -7,6 +7,7 @@ import (
 	"log"
 )
 
+
 func indexOf(element string, data []string ) (int) {
    for k, v := range data {
        if element == v {
@@ -23,6 +24,8 @@ func ClientAuthMiddleware() (gin.HandlerFunc){
 		clientId := c.Param("clientId")
 
 		authMiddleware, err := jwt.InitClientAuthMiddleware(clientId)
+
+		c.Set("authMiddleware", authMiddleware)
 
 		log.Println(authMiddleware)
 

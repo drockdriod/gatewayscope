@@ -3,9 +3,14 @@ package jwt
 import (
     "time"
     "crypto/rsa"
+    "github.com/drockdriod/gatewayscope/db"
+    commonModels "github.com/drockdriod/gatewayscope/models/common"
+    "github.com/drockdriod/gatewayscope/models"
     "github.com/gin-gonic/gin"
 	"github.com/dgrijalva/jwt-go"
     ginJWT "github.com/appleboy/gin-jwt"
+    "github.com/mongodb/mongo-go-driver/bson"
+    "github.com/drockdriod/gatewayscope/utils/crypto/bcrypt"
     "io/ioutil"
     "log"
     "os"
@@ -96,7 +101,39 @@ func initAuthMiddleware(jwtConfig map[string]interface{}) (*ginJWT.GinJWTMiddlew
         },
         Authenticator: func(c *gin.Context) (interface{}, error) {
             // Add database call here to check if account holder can be authenticated
+            log.Println("HERE")
 
+            var jsonBody commonModels.Login
+            var user models.User
+            err := c.BindJSON(&jsonBody)
+
+            if err != nil {
+                return nil, ginJWT.ErrFailedAuthentication
+            }
+
+            items := db.FindOne("users", bson.M{
+                "account.email": jsonBody.Email,   
+            })
+
+            body1, err := bson.Marshal(items)
+
+            if err != nil {
+                log.Println(err.Error())
+            }
+
+            bson.Unmarshal(body1, &user)
+
+            allowAccess := bcrypt.ComparePasswords(user.Account.HashPassword, []byte(jsonBody.Password))
+
+            if allowAccess {
+
+
+                return gin.H{
+                    "token": "tokenString",
+                }, nil
+            } else {
+                return nil, ginJWT.ErrFailedAuthentication
+            }
             // var loginVals login
             // if err := c.ShouldBind(&loginVals); err != nil {
             //     return "", ginJWT.ErrMissingLoginValues

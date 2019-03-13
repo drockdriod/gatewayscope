@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
     "github.com/drockdriod/gatewayscope/db"
     commonModels "github.com/drockdriod/gatewayscope/models/common"
+    "github.com/drockdriod/gatewayscope/models"
     "log"
     // "encoding/json"
     // "context"
@@ -16,6 +17,13 @@ import (
     "github.com/drockdriod/gatewayscope/utils/crypto/keygen"
     "github.com/drockdriod/gatewayscope/utils/crypto/jwt"
 )
+
+type UserAccount struct {
+	Name     string `bson:"name" json:"name"`
+	Email 	 string `bson:"email" json:"email"`
+	Password string `json:"password" bson:"-"`
+	Meta	interface{} `json:"meta,omitempty" bson:"meta"`
+}
 
 func GetAccounts(c *gin.Context){
 	accounts := db.GetItems("accounts", bson.D{})
@@ -134,9 +142,9 @@ func Register(c *gin.Context) {
 }
 
 func UserRegister(c *gin.Context) {
-	var jsonBody commonModels.Account
-	clientId := c.Query("clientId")
+	clientId := c.Param("clientId")
 
+	var jsonBody UserAccount
 	err := c.BindJSON(&jsonBody)
 
 	if err != nil {
@@ -144,12 +152,25 @@ func UserRegister(c *gin.Context) {
         return
     }
 
-	jsonBody.HashPassword = bcrypt.HashAndSalt(jsonBody.Password)
+	objectID, err := bsonPrimitive.ObjectIDFromHex(clientId)
 
-	res, err, userId := db.InsertObj("users", jsonBody)
+	hashPassword := bcrypt.HashAndSalt(jsonBody.Password)
+
+	user := &models.User{
+		Account: commonModels.Account{
+			Name: jsonBody.Name,
+			Email: jsonBody.Email,
+			Password: jsonBody.Password,
+			HashPassword: hashPassword,
+		},
+		ClientId: objectID,
+		Meta: jsonBody.Meta,
+	}
+
+	res, err, userId := db.InsertObj("users", user)
 
 	log.Println(res)
-	
+
 
 	tokenString, err := jwt.GenerateToken(clientId, userId.Hex())
 

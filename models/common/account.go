@@ -8,12 +8,11 @@ import (
 
 // Binding from JSON
 type Account struct {
-	Id		 bsonPrimitive.ObjectID `bson:"_id" json:"-"`
+	Id		 bsonPrimitive.ObjectID `bson:"_id,omitempty" json:"-"`
 	Name     string `bson:"name" json:"name"`
 	Email 	 string `bson:"email" json:"email"`
 	Password string `json:"password" bson:"-"`
 	HashPassword string `bson:"hashpassword"`
-	Meta	 interface{}	`bson:"meta" json:"meta"`
 }
 
 /**
