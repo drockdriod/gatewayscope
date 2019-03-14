@@ -48,3 +48,12 @@ func CompareUserPermissions(permissions []string, userPermissions []string) bool
 
 	return granted
 }
+
+func SetContextValue(property string, value interface{}) gin.HandlerFunc{
+	return func(c *gin.Context){
+		c.Set(property, value)	
+	}
+}
+
+
+

@@ -53,7 +53,7 @@ func apiTokenGenerate(id bsonPrimitive.ObjectID) string{
 	return tokenString
 }
 
-func Login(c *gin.Context) {
+func ClientLogin(c *gin.Context) {
 
 	var jsonBody commonModels.Login
 	var items interface{}
@@ -67,9 +67,16 @@ func Login(c *gin.Context) {
     }
 
 
-    items = db.FindOne("accounts", bson.M{
+    items, err = db.FindOne("accounts", bson.M{
     	"email": jsonBody.Email,
     })
+
+    if err != nil {
+		log.Println(err.Error())
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Email or password is incorrect",	
+		})
+	}
 
 	body1, err := bson.Marshal(items)
 
@@ -100,7 +107,7 @@ func Login(c *gin.Context) {
 }
 
 
-func Register(c *gin.Context) {
+func ClientRegister(c *gin.Context) {
 
 	var jsonBody commonModels.Account
 

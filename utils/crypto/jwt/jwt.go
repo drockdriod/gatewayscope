@@ -10,12 +10,15 @@ import (
 	"github.com/dgrijalva/jwt-go"
     ginJWT "github.com/appleboy/gin-jwt"
     "github.com/mongodb/mongo-go-driver/bson"
+    bsonPrimitive "github.com/mongodb/mongo-go-driver/bson/primitive"
     "github.com/drockdriod/gatewayscope/utils/crypto/bcrypt"
     "io/ioutil"
     "log"
     "os"
     "path/filepath"
     "fmt"
+    "net/http"
+    "encoding/json"
 )
 
 func getClientJwtConfig(clientId string) (map[string]interface{}) {
@@ -99,6 +102,22 @@ func initAuthMiddleware(jwtConfig map[string]interface{}) (*ginJWT.GinJWTMiddlew
             log.Println(claims)
             return claims
         },
+        LoginResponse: func(c *gin.Context, code int, message string, t time.Time) {
+
+            clientId := c.Param("clientId")
+            user := c.MustGet("USER").(models.User)
+
+            tokenString, err := GenerateToken(clientId, user.Id.Hex())
+
+            if(err != nil){
+                log.Println(err.Error())
+                log.Fatal("error jwt")
+            }
+
+            c.JSON(http.StatusOK, gin.H{
+                "token": tokenString,    
+            })
+        },
         Authenticator: func(c *gin.Context) (interface{}, error) {
             // Add database call here to check if account holder can be authenticated
             log.Println("HERE")
@@ -111,9 +130,16 @@ func initAuthMiddleware(jwtConfig map[string]interface{}) (*ginJWT.GinJWTMiddlew
                 return nil, ginJWT.ErrFailedAuthentication
             }
 
-            items := db.FindOne("users", bson.M{
+            items, err := db.FindOne("users", bson.M{
                 "account.email": jsonBody.Email,   
             })
+
+            if err != nil {
+                log.Println(err.Error())
+                c.JSON(http.StatusUnauthorized, gin.H{
+                    "message": "Email or password is incorrect",    
+                })
+            }
 
             body1, err := bson.Marshal(items)
 
@@ -126,28 +152,13 @@ func initAuthMiddleware(jwtConfig map[string]interface{}) (*ginJWT.GinJWTMiddlew
             allowAccess := bcrypt.ComparePasswords(user.Account.HashPassword, []byte(jsonBody.Password))
 
             if allowAccess {
-
-
+                c.Set("USER", user)
                 return gin.H{
                     "token": "tokenString",
                 }, nil
             } else {
                 return nil, ginJWT.ErrFailedAuthentication
             }
-            // var loginVals login
-            // if err := c.ShouldBind(&loginVals); err != nil {
-            //     return "", ginJWT.ErrMissingLoginValues
-            // }
-            // userID := loginVals.Username
-            // password := loginVals.Password
-
-            // if (userID == "admin" && password == "admin") || (userID == "test" && password == "test") {
-            //     return &User{
-            //         UserName:  userID,
-            //         LastName:  "Bo-Yi",
-            //         FirstName: "Wu",
-            //     }, nil
-            // }
 
             return nil, ginJWT.ErrFailedAuthentication
         },
@@ -156,11 +167,64 @@ func initAuthMiddleware(jwtConfig map[string]interface{}) (*ginJWT.GinJWTMiddlew
             log.Println("Authorizator")
             log.Println(data)
 
-            return true
+            contextValue, exists := c.Get("AUTHORIZER_TYPE")
+
+            if(exists && contextValue.(string) == "CLIENT"){
+                // Make client token with sub as admin id and check DB to see if it matches
+                log.Println(contextValue)
+
+                return true
+            } else {
+                var payload commonModels.JwtToken
+                var user models.User
+
+                body1, err := json.Marshal(data)
+
+                if err != nil {
+                    log.Println(err.Error())
+                }
+
+                json.Unmarshal(body1, &payload)
+
+                userId, err := bsonPrimitive.ObjectIDFromHex(payload.Sub)
+
+                log.Println("payload")
+                log.Println(payload)
+                log.Println(userId)
+
+
+                if err != nil {
+                    log.Println(err.Error())
+                }
+
+                item, err := db.FindOne("users", bson.M{
+                    "_id": userId,   
+                })
+
+                if err != nil {
+                    log.Println(err.Error())
+
+                    return false
+                } else{
+
+                    body1, _ = bson.Marshal(item)
+
+                    bson.Unmarshal(body1, &user)
+                    log.Println(user)
+
+                    c.Set("USER", user)
+                    
+                    return true
+                }
+
+
+            }
+
+
+            return false
         },
         Unauthorized: func(c *gin.Context, code int, message string) {
             c.JSON(code, gin.H{
-                "code":    code,
                 "message": "Unauthorized access",
             })
         },
@@ -179,14 +243,20 @@ func GenerateToken(aud string, sub ...string) (string, error) {
     log.Println(sub)
 
     jwtConfig := getClientJwtConfig(aud)
-    log.Println(jwtConfig)
+    exp := jwtConfig["exp"].(int64)
+
+    // Set exp to one hour if logging in as user
+    if(sub != nil){
+        exp = time.Now().Add(time.Hour).Unix()
+    }
+
 
     // Create the token
     token := jwt.NewWithClaims(jwt.SigningMethodRS512, jwt.MapClaims{
     	"iss": jwtConfig["iss"],
     	"aud": aud,
         "sub": sub[0],
-        "exp": jwtConfig["exp"].(int64),
+        "exp": exp,
     })
 
     // Sign and get the complete encoded token as a string

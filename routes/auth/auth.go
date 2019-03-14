@@ -11,11 +11,11 @@ import (
 func GetGroup(parentPath *gin.RouterGroup) *gin.RouterGroup {
 	r := parentPath.Group("/auth/:clientId")
 		
-	parentPath.POST("/register", authController.Register)
+	parentPath.POST("/register", authController.ClientRegister)
 
-	parentPath.POST("/login", authController.Login)
+	parentPath.POST("/login", authController.ClientLogin)
 
-	r.Use(commonUtils.ClientAuthMiddleware())
+	r.Use(commonUtils.SetContextValue("AUTHORIZER_TYPE", "CLIENT"),commonUtils.ClientAuthMiddleware())
 	{
 		r.GET("/accounts", authController.GetAccounts)
 
